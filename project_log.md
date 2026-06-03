@@ -1,7 +1,7 @@
 # Project Log: Breviatea Nanopore PTA SAGs
 **Project directory:** `4_breviate_nanopore_pta_sags`  
 **HPC cluster:** Dardel (PDC, KTH Stockholm) — allocation `naiss2026-3-199`  
-**Last updated:** 2026-06-03
+**Last updated:** 2026-06-03 (evening)
 
 ---
 
@@ -280,6 +280,43 @@ barcode01 and barcode03 assemblies ran successfully. blo assembly failed repeate
 
 ---
 
+### 2026-06-03 — GitHub repository setup
+
+Repository published at: https://github.com/rustem-musaev/breviate_nanopore_pta_sags
+
+`.gitignore` tracks: all `code/*.sh` scripts, `analyses/**/*.txt` (NanoPlot stats, assembly info, contig stats), `project_log.md`, `README.md`. Excludes: raw data, large binary analysis outputs (fastq.gz, bam, fasta, etc.), human genome reference, SLURM job logs, and intermediate tmp files.
+
+---
+
+### 2026-06-03 — DeepMicroClass2 installation
+
+**Tool:** DeepMicroClass2 (in `DeepMicroClass2/`)  
+**Script:** `code/12_deepmicroclass.sh`  
+**Output:** `analyses/12_euk_prok/`
+
+DeepMicroClass2 classifies assembled contigs as eukaryotic, prokaryotic, or viral. It will be run on the Flye assemblies from step 11 to separate Breviatea contigs from any remaining contaminants.
+
+**Installation:** Installed into an isolated virtual environment at `/cfs/klemming/projects/supr/tango2_lund_storage/nobackup/rustem_storage/envs/deepmicroclass/` using `cray-python/3.11.7`. NumPy was pinned to `<2` to avoid conflicts with system matplotlib compiled against NumPy 1.x. `PYTHONNOUSERSITE=1` is required at runtime to prevent `~/.local` packages from overriding the venv.
+
+**Activation:**
+```bash
+PYTHONNOUSERSITE=1 source /cfs/klemming/projects/supr/tango2_lund_storage/nobackup/rustem_storage/envs/deepmicroclass/bin/activate
+```
+
+DeepMicroClass2 was run on all three Flye assemblies. Eukaryotic contigs (label == "euk") were extracted with awk + seqtk subseq into `euk_contigs.fasta` per sample. The extraction step was integrated directly into `12_deepmicroclass.sh`.
+
+**Results (`seqkit stats euk_contigs.fasta`):**
+
+| Sample | Contigs | Total length | Min | Avg | Max |
+|--------|---------|-------------|-----|-----|-----|
+| barcode01 | 425 | 1,215,969 bp | 503 | 2,861 | 14,948 |
+| barcode03 | 78 | 168,328 bp | 505 | 2,158 | 8,537 |
+| blo | 976 | 2,955,104 bp | 513 | 3,028 | 9,450 |
+
+barcode03 has notably fewer eukaryotic contigs (78 vs 425/976), consistent with the lower read yield from that sample throughout the pipeline.
+
+---
+
 ## Current status and next steps
 
 | Step | Script | Status |
@@ -289,8 +326,7 @@ barcode01 and barcode03 assemblies ran successfully. blo assembly failed repeate
 | 11 — Flye assembly (barcode01) | `code/11_flye_barcode01.sh` | ✅ Done |
 | 11 — Flye assembly (barcode03) | `code/11_flye_barcode03.sh` | ✅ Done |
 | 11 — Flye assembly (blo) | `code/11_flye_blo.sh` | ❌ Failed — duplicate IDs, rerun after step 9 |
-
-**Priority action:** `sbatch code/9_decontamination.sh`, then resubmit `code/11_flye_blo.sh`.
+| 12 — DeepMicroClass2 euk/prok classification + extraction | `code/12_deepmicroclass.sh` | ✅ Done (barcode01, barcode03, blo) |
 
 ---
 

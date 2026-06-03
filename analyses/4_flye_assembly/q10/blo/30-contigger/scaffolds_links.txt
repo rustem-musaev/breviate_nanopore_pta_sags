@@ -1,6 +1,0 @@
-contig_1149	-	contig_6683	+
-contig_1151	+	contig_6683	-
-contig_2582	-	contig_2583	+
-contig_2972	+	contig_2975	-
-contig_3432	+	contig_3433	+
-contig_3432	-	contig_3433	-

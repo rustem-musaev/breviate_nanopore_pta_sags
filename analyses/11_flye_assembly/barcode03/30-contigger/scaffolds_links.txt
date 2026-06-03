@@ -1,0 +1,2 @@
+contig_148	+	contig_149	+
+contig_148	-	contig_149	+

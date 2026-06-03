@@ -1,0 +1,21 @@
+# Raw sequencing data (directory or symlink)
+data
+data/
+
+# Human genome reference (large index files)
+human_genome/
+
+# Analysis outputs — large binary files; plain .txt files are tracked
+analyses/**
+!analyses/**/
+!analyses/**/*.txt
+# Except intermediate temp files
+analyses/**/tmp/
+
+# SLURM job logs (in project root and code/)
+*.sh.*.out
+*.sh.*.err
+
+# Non-script files in code/
+code/*
+!code/*.sh

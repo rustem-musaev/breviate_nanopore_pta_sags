@@ -1,7 +1,7 @@
 # Project Log: Breviatea Nanopore PTA SAGs
 **Project directory:** `4_breviate_nanopore_pta_sags`  
 **HPC cluster:** Dardel (PDC, KTH Stockholm) — allocation `naiss2026-3-199`  
-**Last updated:** 2026-06-03 (evening)
+**Last updated:** 2026-06-04
 
 ---
 
@@ -315,6 +315,57 @@ DeepMicroClass2 was run on all three Flye assemblies. Eukaryotic contigs (label 
 
 barcode03 has notably fewer eukaryotic contigs (78 vs 425/976), consistent with the lower read yield from that sample throughout the pipeline.
 
+**⚠️ No confidence threshold — results unreliable:** BLASTing the first contig in barcode01 returned *Vibrio* (a bacterium) as the closest match. The contig was 4,320 bp and had a DeepMicroClass2 confidence of 0.67 — misclassified due to low model confidence. The extraction awk command was updated to require confidence ≥ 0.9 (`$3>=0.9`) and extraction was rerun on existing classification files.
+
+**Results after applying confidence ≥ 0.9 threshold:**
+
+| Sample | No threshold | ≥0.9 confidence |
+|--------|-------------|-----------------|
+| barcode01 | 425 | 88 |
+| barcode03 | 78 | 24 |
+| blo | 976 | 530 |
+
+~80% of barcode01 and ~70% of barcode03 calls were low-confidence and dropped. blo retains more contigs (530/976), suggesting a cleaner assembly.
+
+Even at ≥0.9 confidence, manual BLASTing of the top barcode01 contig still returned *Flagellimonas aurea* (a bacterium) at 87.4% identity, indicating that DeepMicroClass2 alone is not sufficient as a prokaryote filter. A homology-based approach (BLASTx against a eukaryote protein database) was adopted as a more reliable filter.
+
+---
+
+### 2026-06-04 — BLASTx against EukProt to discard prokaryotic contigs (step 13)
+
+**Scripts:** `code/13_blastx_eukprot.sh`, `code/13b_blastx_eukprot_blo_bc03.sh`  
+**Tool:** BLAST+ 2.15.0 (`blastx`)  
+**Database:** EukProt v3 at `/cfs/klemming/projects/supr/tango2_lund_storage/nobackup/rustem_storage/eukprot_db/eukprot_v3`  
+**Input:** Flye assemblies from step 11 (`analyses/11_flye_assembly/*/assembly.fasta`)  
+**Output:** `analyses/13_blastx_eukprot/`
+
+**Rationale:**  
+EukProt is a curated database of eukaryote proteins only. Any BLASTx hit against it (at e-value ≤ 1e-5) confirms a contig encodes eukaryotic proteins — no taxonomy filtering is needed. This is more reliable than DeepMicroClass2 for the goal of discarding prokaryotes.
+
+BLASTx was run with `-max_target_seqs 1` (best hit only) and `-num_threads 16`. Output format 6 with columns: `qseqid sseqid pident length evalue bitscore stitle`.
+
+**Status:** barcode01 completed (1,919 hits). barcode03 and blo hit the 8-hour time limit; resubmitted via `13b_blastx_eukprot_blo_bc03.sh`.
+
+**Observed hit quality (barcode01):** Top hits are to closely related amoebozoa (e.g. *Gocevia fonbrunei*) at >96% amino acid identity, with e-values of 0.0 and alignment lengths of 197–261 aa. Alignment lengths range from 11 to 1,249 aa (median ~170 aa). All hits at e-value ≤ 1e-5 are treated as reliable; no additional identity cutoff was applied.
+
+---
+
+### 2026-06-04 — Extraction of eukaryotic contigs from BLASTx results (step 14)
+
+**Scripts:** `code/14a_extract_euk_blast_bc01.sh`, `code/14b_extract_euk_blast_bc03_blo.sh`  
+**Tools:** awk, seqtk 1.4  
+**Output:** `analyses/14_euk_contigs_blast/`
+
+Contig IDs are extracted from column 1 of the BLASTx TSV (deduplicated with `sort -u`) and sequences pulled from the Flye assembly with `seqtk subseq`. `14a` (barcode01) is ready to run now; `14b` (barcode03, blo) runs after `13b` completes.
+
+**Results (barcode01):**
+
+| File | Contigs | Total length | Min | Avg | Max |
+|------|---------|-------------|-----|-----|-----|
+| barcode01_euk_contigs.fasta | 759 | 2,340,829 bp (~2.3 Mb) | 323 | 3,084 | 17,481 |
+
+**Observation:** The assembled eukaryotic fraction is only ~2.3 Mb. A typical protist genome is tens to hundreds of Mb, so this represents roughly 1% of the expected genome — severely fragmented and incomplete. This is consistent with PTA whole-genome amplification artefacts: PTA produces highly uneven coverage, leaving large portions of the genome unamplified and unassembled. The assembly is not expected to be a complete genome; the goal is to recover as much Breviatea sequence as possible from the available data.
+
 ---
 
 ## Current status and next steps
@@ -327,6 +378,8 @@ barcode03 has notably fewer eukaryotic contigs (78 vs 425/976), consistent with 
 | 11 — Flye assembly (barcode03) | `code/11_flye_barcode03.sh` | ✅ Done |
 | 11 — Flye assembly (blo) | `code/11_flye_blo.sh` | ❌ Failed — duplicate IDs, rerun after step 9 |
 | 12 — DeepMicroClass2 euk/prok classification + extraction | `code/12_deepmicroclass.sh` | ✅ Done (barcode01, barcode03, blo) |
+| 13 — BLASTx vs EukProt | `code/13_blastx_eukprot.sh` | ✅ barcode01 done; ⏳ barcode03 + blo resubmitted |
+| 14 — Extract euk contigs from BLASTx | `code/14a/14b_extract_euk_blast_*.sh` | ⏳ barcode01 ready to run; barcode03 + blo pending step 13b |
 
 ---
 

@@ -23,7 +23,7 @@ module load seqtk/1.4
 for assembly in "${flye_assemblies}"/*/assembly.fasta; do
     sample="$(basename "$(dirname "$assembly")")"
     python "${deepmicroclass}/predict.py" --contig "$assembly" --out_dir "${outdir}/${sample}"
-    awk 'NR>1 && $2=="euk" {print $1}' "${outdir}/${sample}/classification.tsv" > "${outdir}/${sample}/euk_contigs.txt"
+    awk 'NR>1 && $2=="euk" && $3>=0.9 {print $1}' "${outdir}/${sample}/classification.tsv" > "${outdir}/${sample}/euk_contigs.txt"
     seqtk subseq "$assembly" "${outdir}/${sample}/euk_contigs.txt" > "${outdir}/${sample}/euk_contigs.fasta"
 done
 

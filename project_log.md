@@ -1,7 +1,7 @@
 # Project Log: Breviatea Nanopore PTA SAGs
 **Project directory:** `4_breviate_nanopore_pta_sags`  
 **HPC cluster:** Dardel (PDC, KTH Stockholm) — allocation `naiss2026-3-199`  
-**Last updated:** 2026-06-04
+**Last updated:** 2026-06-09
 
 ---
 
@@ -364,7 +364,61 @@ Contig IDs are extracted from column 1 of the BLASTx TSV (deduplicated with `sor
 |------|---------|-------------|-----|-----|-----|
 | barcode01_euk_contigs.fasta | 759 | 2,340,829 bp (~2.3 Mb) | 323 | 3,084 | 17,481 |
 
-**Observation:** The assembled eukaryotic fraction is only ~2.3 Mb. A typical protist genome is tens to hundreds of Mb, so this represents roughly 1% of the expected genome — severely fragmented and incomplete. This is consistent with PTA whole-genome amplification artefacts: PTA produces highly uneven coverage, leaving large portions of the genome unamplified and unassembled. The assembly is not expected to be a complete genome; the goal is to recover as much Breviatea sequence as possible from the available data.
+**Results (all samples, `seqkit stats`):**
+
+| Sample | Contigs | Total length | Min | Avg | Max |
+|--------|---------|-------------|-----|-----|-----|
+| barcode01 | 759 | 2,340,829 bp (~2.3 Mb) | 323 | 3,084 | 17,481 |
+| barcode03 | 291 | 661,274 bp (~0.7 Mb) | 454 | 2,272 | 14,369 |
+| blo | 624 | 2,006,306 bp (~2.0 Mb) | 412 | 3,215 | 15,365 |
+
+**Observation:** The assembled eukaryotic fraction is only ~2–2.3 Mb per sample. A typical protist genome is tens to hundreds of Mb, so this represents roughly 1% of the expected genome — severely fragmented and incomplete. This is consistent with PTA whole-genome amplification artefacts: PTA produces highly uneven coverage, leaving large portions of the genome unamplified and unassembled. The assembly is not expected to be a complete genome; the goal is to recover as much Breviatea sequence as possible from the available data.
+
+---
+
+### 2026-06-06 — BLASTx against nr for taxonomy-based filtering (step 15)
+
+**Script:** `code/15_blastx_nr.sh`  
+**Tool:** BLAST+ 2.15.0 (`blastx`)  
+**Database:** nr at `/sw/data/blast_databases/nr`  
+**Output:** `analyses/15_blastx_nr/`
+
+nr was chosen over EukProt for a more comprehensive search using the exclusion principle: discard contigs whose best hit is Bacteria or Archaea, keep everything else (including no-hit contigs, which may belong to understudied lineages). Output format includes `sskingdoms` and `sscinames` columns for taxonomy filtering.
+
+**Status:** Hit the 48-hour time limit after processing only part of barcode01 (95 hits). nr is too large (~300 GB, 163 volumes) to run feasibly on a single shared node — the bottleneck is Lustre disk I/O, not CPU. Abandoned in favour of step 17.
+
+---
+
+### 2026-06-06 — Blobtools visualisation (step 16)
+
+**Script:** `code/16_blobtools.sh`  
+**Tools:** minimap2/2.28, samtools/1.20, blobtools/1.1.1  
+**Output:** `analyses/16_blobtools/`
+
+Reads from step 9 were mapped back to each assembly with minimap2 to get per-contig coverage. The nr BLASTx output was reformatted to standard blast fmt6 (awk, placeholder zeros for unused positional columns) before passing to blobtools. Blob plots (GC content vs coverage, coloured by phylum) and summary tables produced for all three samples.
+
+---
+
+### 2026-06-09 — blastn against custom Breviatea database (step 17)
+
+**Script:** `code/17_blast_breviatea.sh`  
+**Tool:** BLAST+ 2.15.0 (`blastn`)  
+**Database:** Custom nucleotide database of Breviatea and related protists at `/cfs/klemming/projects/supr/tango2_lund_storage/nobackup/databases/customblastdb_2026-06-02/Breviates/`  
+**Input:** Flye assemblies from step 11 (`analyses/11_flye_assembly/*/assembly.fasta`)  
+**Output:** `analyses/17_blast_breviates/`
+
+**Rationale:**  
+EukProt has poor coverage of Breviatea specifically, yielding only ~750–760 contigs per sample. A custom database of Breviatea transcriptomes and genome assemblies (15 nucleotide databases combined into a single alias with `blastdb_aliastool`, 489,431 sequences total) provides much more sensitive detection of Breviatea-specific sequences. The full assembly is used as input — not pre-filtered contigs — because blastn against a protist-specific database is fast and any hit directly confirms eukaryotic (Breviatea) origin. Halarcobacter and the L. limosa protein database were excluded.
+
+**Results (`seqkit stats`):**
+
+| Sample | Contigs | Total length | Min | Avg | Max |
+|--------|---------|-------------|-----|-----|-----|
+| barcode01 | 7,005 | 25,729,780 bp (~25.7 Mb) | 82 | 3,673 | 34,268 |
+| barcode03 | 296 | 671,009 bp (~0.7 Mb) | 454 | 2,267 | 14,369 |
+| blo | 5,626 | 17,483,297 bp (~17.5 Mb) | 139 | 3,108 | 15,365 |
+
+barcode01 and blo recover ~10× more sequence than the EukProt approach (25.7 Mb and 17.5 Mb vs 2.3 Mb and 2.0 Mb), confirming that EukProt was missing a large fraction of Breviatea-specific genes. barcode03 remains low-yield consistent with its lower read count throughout the pipeline.
 
 ---
 
@@ -378,8 +432,11 @@ Contig IDs are extracted from column 1 of the BLASTx TSV (deduplicated with `sor
 | 11 — Flye assembly (barcode03) | `code/11_flye_barcode03.sh` | ✅ Done |
 | 11 — Flye assembly (blo) | `code/11_flye_blo.sh` | ❌ Failed — duplicate IDs, rerun after step 9 |
 | 12 — DeepMicroClass2 euk/prok classification + extraction | `code/12_deepmicroclass.sh` | ✅ Done (barcode01, barcode03, blo) |
-| 13 — BLASTx vs EukProt | `code/13_blastx_eukprot.sh` | ✅ barcode01 done; ⏳ barcode03 + blo resubmitted |
-| 14 — Extract euk contigs from BLASTx | `code/14a/14b_extract_euk_blast_*.sh` | ⏳ barcode01 ready to run; barcode03 + blo pending step 13b |
+| 13 — BLASTx vs EukProt | `code/13_blastx_eukprot.sh` | ✅ Done (all three samples) |
+| 14 — Extract euk contigs from EukProt BLASTx | `code/14a/14b_extract_euk_blast_*.sh` | ✅ Done (all three samples) |
+| 15 — BLASTx vs nr | `code/15_blastx_nr.sh` | ❌ Abandoned — time limit, nr too slow on shared node |
+| 16 — Blobtools visualisation | `code/16_blobtools.sh` | ✅ Done (all three samples) |
+| 17 — blastn vs custom Breviatea db | `code/17_blast_breviatea.sh` | ✅ Done (all three samples) |
 
 ---
 

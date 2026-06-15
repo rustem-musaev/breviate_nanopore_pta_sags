@@ -1,7 +1,7 @@
 # Project Log: Breviatea Nanopore PTA SAGs
 **Project directory:** `4_breviate_nanopore_pta_sags`  
 **HPC cluster:** Dardel (PDC, KTH Stockholm) — allocation `naiss2026-3-199`  
-**Last updated:** 2026-06-09
+**Last updated:** 2026-06-10
 
 ---
 
@@ -10,9 +10,11 @@
 This project aims to sequence and assemble single amplified genomes (SAGs) of Breviatea — a lineage of anaerobic microbial eukaryotes. Because SAGs typically yield very low amounts of starting material, whole genome amplification was performed using Primary Template Amplification (PTA) prior to sequencing. Long-read Oxford Nanopore Technology (ONT) sequencing was chosen to maximise assembly contiguity from the amplified material.
 
 Three samples are being processed:
-- **barcode01** — barcoded sample 1
-- **barcode03** — barcoded sample 3
-- **blo** — sample from experiment group BLO
+- **barcode01** — Simpson lab strain (BLO)
+- **barcode03** — CARMGS strain (BLO)
+- **blo** (= barcode02) — TEN1 strain (BLO)
+
+**Note on sample naming:** The sample labelled `blo` throughout this pipeline is barcode02. It was initially named `blo` after the experiment group BLO, before the strain identities were confirmed. However, all three samples are BLO strains, so the name `blo` as used here for barcode02/TEN1 specifically is a misnomer — it does not distinguish this sample from the others in any biologically meaningful way. Strain identity was confirmed by Nik after sequencing.
 
 ---
 
@@ -340,7 +342,7 @@ Even at ≥0.9 confidence, manual BLASTing of the top barcode01 contig still ret
 **Output:** `analyses/13_blastx_eukprot/`
 
 **Rationale:**  
-EukProt is a curated database of eukaryote proteins only. Any BLASTx hit against it (at e-value ≤ 1e-5) confirms a contig encodes eukaryotic proteins — no taxonomy filtering is needed. This is more reliable than DeepMicroClass2 for the goal of discarding prokaryotes.
+EukProt is a curated database of eukaryote proteins only. Any BLASTx hit against it (at e-value ≤ 1e-5) confirms a contig encodes eukaryotic proteins — no taxonomy filtering is needed. This is more reliable than DeepMicroClass2 for the goal of discarding prokaryotes. Note: steps 13–15 were pursued before recalling that a custom Breviatea-specific nucleotide database already existed on the cluster (step 17). The EukProt and nr approaches were therefore superseded by the more targeted blastn in step 17.
 
 BLASTx was run with `-max_target_seqs 1` (best hit only) and `-num_threads 16`. Output format 6 with columns: `qseqid sseqid pident length evalue bitscore stitle`.
 
@@ -422,6 +424,33 @@ barcode01 and blo recover ~10× more sequence than the EukProt approach (25.7 Mb
 
 ---
 
+### 2026-06-10 — BUSCO completeness assessment (step 18)
+
+**Script:** `code/18_busco.sh`  
+**Tool:** BUSCO 5.5.0, Augustus 3.5.0, HMMER 3.4  
+**Lineage:** `eukaryota_odb10` (255 conserved eukaryotic genes)  
+**Input:** Breviatea-confirmed contigs from step 17 (`analyses/17_blast_breviates/`)  
+**Output:** `analyses/18_busco/`  
+**Mode:** genome
+
+**Results:**
+
+| Sample | Complete (C) | Single (S) | Duplicated (D) | Fragmented (F) | Missing (M) |
+|--------|-------------|------------|----------------|----------------|-------------|
+| barcode01 | 5.5% | 2.4% | 3.1% | 2.4% | 92.1% |
+| barcode03 | 0.0% | 0.0% | 0.0% | 0.8% | 99.2% |
+| blo | 7.8% | 3.5% | 4.3% | 2.0% | 90.2% |
+
+**Interpretation:**  
+Results are very poor. 90–99% of conserved eukaryotic genes are absent from all three assemblies. The duplication values (3.1% in barcode01, 4.3% in blo) are informative: they indicate that a small number of genomic loci were over-amplified by PTA, causing Flye to assemble them into multiple redundant contigs. Meanwhile the majority of the genome received insufficient amplification and produced no reads — and therefore no contigs. Flye only outputs successfully assembled contigs; reads with no overlapping partners are silently discarded and never appear in the assembly.
+
+The low completeness is therefore largely a **wet lab problem**: the PTA amplification itself was uneven, leaving most of the genome unamplified. This is not recoverable by bioinformatics alone. Published PTA SAG studies typically report 20–60% BUSCO completeness for good amplifications; 5–8% suggests the starting material was very limited or partially degraded.
+
+**Planned next step — coverage normalisation:**  
+Although normalisation cannot recover genomic regions absent from the reads, it may improve assembly of the regions that *were* amplified. PTA over-amplifies certain loci, flooding the Flye assembly graph with redundant reads from those regions and potentially preventing proper assembly of lower-coverage regions nearby. Capping read depth per region (digital normalisation) with BBNorm reduces this dominance, allowing the assembler to focus more evenly on the amplified fraction. This could modestly improve BUSCO completeness (estimated ~10–15% at best) and contig contiguity, but will not address the fundamental missing 90%+ of the genome.
+
+---
+
 ## Current status and next steps
 
 | Step | Script | Status |
@@ -437,6 +466,72 @@ barcode01 and blo recover ~10× more sequence than the EukProt approach (25.7 Mb
 | 15 — BLASTx vs nr | `code/15_blastx_nr.sh` | ❌ Abandoned — time limit, nr too slow on shared node |
 | 16 — Blobtools visualisation | `code/16_blobtools.sh` | ✅ Done (all three samples) |
 | 17 — blastn vs custom Breviatea db | `code/17_blast_breviatea.sh` | ✅ Done (all three samples) |
+| 18 — BUSCO completeness | `code/18_busco.sh` | ✅ Done — 5–8% completeness, poor amplification |
+| 19 — Coverage normalisation (BBNorm) | `code/19_bbnorm.sh` | ❌ Abandoned — worsened assemblies (see steps 20–21) |
+| 20 — Flye assembly of normalised reads | `code/20_flye_barcode01/03/blo.sh` | ❌ Abandoned — inferior to step 11 |
+| 21 — QUAST assembly comparison | `code/21_quast.sh` | ✅ Done — confirmed step 11 assemblies are better |
+
+---
+
+### 2026-06-15 — Coverage normalisation experiment (steps 19–21)
+
+**Scripts:** `code/19_bbnorm.sh`, `code/20_flye_barcode01/03/blo.sh`, `code/21_quast.sh`  
+**Tools:** BBNorm 39.06, Flye 2.9.6, QUAST  
+**Outcome:** Abandoned — normalisation worsened assemblies across all three samples.
+
+**Rationale for attempting normalisation:**  
+PTA amplification is highly uneven. The hypothesis was that capping read depth per region (digital normalisation) would reduce the dominance of over-amplified loci and allow Flye to assemble lower-coverage regions more effectively.
+
+Per-sample targets were derived from the Flye `assembly_info.txt` coverage distributions (≈2× median contig coverage):
+- barcode01: target=40× (median contig coverage 20×)
+- barcode03: target=50× (median 27×, but highly skewed — mean 94×, max 1508×)
+- blo: target=40× (median contig coverage 20×)
+
+**QUAST comparison — step 11 (raw decontaminated) vs step 20 (BBNorm normalised):**
+
+```
+Assembly                    run11_barcode01  run11_barcode03  run11_blo  run20_barcode01  run20_barcode03  run20_blo
+# contigs (>= 0 bp)         14,411           317              6,668      12,429           44               5,520
+Total length (>= 0 bp)      47,956,439       724,005          20,529,409 43,460,855       138,918          17,686,690
+Largest contig              34,268           14,369           15,365     31,049           16,149           13,399
+N50                         4,374            2,872            3,682      4,407            4,065            3,674
+N90                         1,899            1,200            1,865      2,096            1,853            2,066
+GC (%)                      47.18            40.18            44.99      47.39            40.34            45.16
+```
+
+**Why normalisation failed:**  
+BBNorm is a short-read tool designed for de Bruijn graph assemblers (SPAdes, Velvet), which struggle when coverage is uneven because the graph becomes tangled. Flye uses an overlap-layout-consensus approach with a repeat graph that is explicitly designed to handle uneven coverage — the `--meta` flag is intended for exactly this scenario. High coverage in some regions benefits Flye rather than confusing it. By discarding reads above the target depth, BBNorm reduced the total evidence available to the assembler with no compensating benefit. The effect was most severe for barcode03, which lost 86% of its contigs (317 → 44) and 81% of its total sequence (724 kb → 139 kb).
+
+**Conclusion:** Step 11 assemblies are the correct ones to use for all downstream analyses. The Breviatea-classified contigs from step 17 (derived from step 11) remain the primary dataset.
+
+**What would actually improve the assembly:**  
+The 5–8% BUSCO completeness is a wet-lab problem, not a bioinformatics one. Options that would genuinely help:
+1. **Multiple amplification replicates** — amplifying several aliquots of the same cell lysate and pooling the sequencing data averages out PTA bias, since different aliquots preferentially amplify different loci.
+2. **Better starting material** — if cells are partially lysed or DNA is degraded before amplification, PTA amplifies short fragments, producing short reads and poor assembly contiguity. The median read length here (522–704 bp) is low even for PTA.
+3. **Complementary Illumina sequencing** — sequencing the same PTA-amplified material on Illumina provides high depth and better base accuracy for the amplified fraction, enabling a hybrid assembly that outperforms either platform alone.
+4. **More sequencing depth** — additional Nanopore sequencing from the same amplified material would help at the margins, particularly for barcode03 which had the least data throughout.
+
+---
+
+## Current status and next steps
+
+| Step | Script | Status |
+|------|--------|--------|
+| 9 — Decontamination (PAF, BLAST-like) | `code/9_decontamination.sh` | ⚠️ Needs rerun (script updated after last run) |
+| 10 — QC decontaminated reads | `code/10_nanoplot.sh` | ⏭ Skipped |
+| 11 — Flye assembly (barcode01) | `code/11_flye_barcode01.sh` | ✅ Done |
+| 11 — Flye assembly (barcode03) | `code/11_flye_barcode03.sh` | ✅ Done |
+| 11 — Flye assembly (blo) | `code/11_flye_blo.sh` | ❌ Failed — duplicate IDs, rerun after step 9 |
+| 12 — DeepMicroClass2 euk/prok classification + extraction | `code/12_deepmicroclass.sh` | ✅ Done (barcode01, barcode03, blo) |
+| 13 — BLASTx vs EukProt | `code/13_blastx_eukprot.sh` | ✅ Done (all three samples) |
+| 14 — Extract euk contigs from EukProt BLASTx | `code/14a/14b_extract_euk_blast_*.sh` | ✅ Done (all three samples) |
+| 15 — BLASTx vs nr | `code/15_blastx_nr.sh` | ❌ Abandoned — time limit, nr too slow on shared node |
+| 16 — Blobtools visualisation | `code/16_blobtools.sh` | ✅ Done (all three samples) |
+| 17 — blastn vs custom Breviatea db | `code/17_blast_breviatea.sh` | ✅ Done (all three samples) |
+| 18 — BUSCO completeness | `code/18_busco.sh` | ✅ Done — 5–8% completeness, poor amplification |
+| 19 — Coverage normalisation (BBNorm) | `code/19_bbnorm.sh` | ❌ Abandoned — worsened assemblies |
+| 20 — Flye assembly of normalised reads | `code/20_flye_barcode01/03/blo.sh` | ❌ Abandoned — inferior to step 11 |
+| 21 — QUAST assembly comparison | `code/21_quast.sh` | ✅ Done — confirmed step 11 assemblies are better |
 
 ---
 

@@ -4,11 +4,11 @@ Genome assembly pipeline for single amplified genomes (SAGs) of *Breviatea* — 
 
 ## Samples
 
-| Sample | Description |
-|--------|-------------|
-| barcode01 | Barcoded sample 1 |
-| barcode03 | Barcoded sample 3 |
-| blo | BLO experiment group |
+| Sample | Strain |
+|--------|--------|
+| barcode01 | Simpson Lab strain |
+| barcode02 | TEN1 |
+| barcode03 | CARMGS |
 
 ## Pipeline
 

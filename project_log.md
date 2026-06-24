@@ -277,6 +277,16 @@ The output files in `analyses/9_decontamination/` were written at 16:57–17:07 
 
 **Note:** Step 10 (NanoPlot QC on step 9 output) was written (`code/10_nanoplot.sh`) but skipped in favour of proceeding directly to assembly.
 
+**Assembly statistics (`seqkit stats -a`):**
+
+| Sample | Contigs | Total length | Min | Avg | Max | N50 | GC% |
+|--------|--------:|-------------:|----:|----:|----:|----:|----:|
+| barcode01 (Simpson Lab) | 14,411 | 47,956,439 | 10 | 3,328 | 34,268 | 4,366 | 47.17 |
+| barcode02 (TEN1) — blo | 6,668 | 20,529,409 | 16 | 3,079 | 15,365 | 3,674 | 44.99 |
+| barcode03 (CARMGS) | 317 | 724,005 | 454 | 2,284 | 14,369 | 2,868 | 40.23 |
+
+barcode01 produced the largest assembly (~48 Mb, 14k contigs), consistent with higher input DNA quality. barcode03 assembled poorly (317 contigs, 724 kb), likely due to strong amplification bias or low DNA input. blo/barcode02 is intermediate (~20.5 Mb, 6.7k contigs).
+
 **Status:**  
 barcode01 and barcode03 assemblies ran successfully. blo assembly failed repeatedly with a Flye "duplicated sequence IDs" error. Root cause: the step 9 outputs that existed at the time were produced by an older script version that could create duplicate read IDs in the keep list. The clean final version of `9_decontamination.sh` uses `sort -u` on the combined keep list and inherently prevents duplicates. Rerunning `9_decontamination.sh` will regenerate all three files cleanly, after which `11_flye_blo.sh` can be resubmitted.
 

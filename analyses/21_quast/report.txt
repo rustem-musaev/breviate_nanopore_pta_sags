@@ -1,0 +1,25 @@
+All statistics are based on contigs of size >= 500 bp, unless otherwise noted (e.g., "# contigs (>= 0 bp)" and "Total length (>= 0 bp)" include all contigs).
+
+Assembly                    run11_barcode01  run11_barcode03  run11_blo  run20_barcode01  run20_barcode03  run20_blo
+# contigs (>= 0 bp)         14411            317              6668       12429            44               5520     
+# contigs (>= 1000 bp)      12532            229              6101       11371            38               5239     
+# contigs (>= 5000 bp)      2643             19               905        2504             7                754      
+# contigs (>= 10000 bp)     362              4                51         270              2                45       
+# contigs (>= 25000 bp)     4                0                0          1                0                0        
+# contigs (>= 50000 bp)     0                0                0          0                0                0        
+Total length (>= 0 bp)      47956439         724005           20529409   43460855         138918           17686690 
+Total length (>= 1000 bp)   46725646         667454           20154304   42756826         135576           17493140 
+Total length (>= 5000 bp)   19814545         152641           6097751    18184393         57586            5022086  
+Total length (>= 10000 bp)  4615805          50126            590709     3395434          27069            505478   
+Total length (>= 25000 bp)  116071           0                0          31049            0                0        
+Total length (>= 50000 bp)  0                0                0          0                0                0        
+# contigs                   14185            307              6601       12299            43               5490     
+Largest contig              34268            14369            15365      31049            16149            13399    
+Total length                47868524         719283           20503461   43411280         138441           17674900 
+GC (%)                      47.18            40.18            44.99      47.39            40.34            45.16    
+N50                         4374             2872             3682       4407             4065             3674     
+N90                         1899             1200             1865       2096             1853             2066     
+auN                         5278.1           3942.9           4254.2     5174.0           5766.6           4210.4   
+L50                         3524             77               1876       3255             10               1651     
+L90                         9994             211              4921       8964             30               4215     
+# N's per 100 kbp           0.00             0.00             0.00       0.00             0.00             0.00     

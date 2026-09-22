@@ -1,0 +1,7 @@
+contig_128	-	contig_131	+
+contig_2238	+	contig_2770	+
+contig_2876	-	contig_2880	+
+contig_3128	-	contig_3129	+
+contig_4121	+	contig_4122	+
+contig_4121	-	contig_4122	-
+contig_4426	+	contig_6619	-

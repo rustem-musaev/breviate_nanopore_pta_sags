@@ -36,6 +36,6 @@ A strict unmapped-only filter (step 5) removed ~89% of barcode03 reads. Because 
 
 ## HPC
 
-Most jobs run on [Dardel](https://www.pdc.kth.se/hpc-services/computing-systems/dardel) (PDC, KTH Stockholm) under NAISS allocation `naiss2026-3-199`. Scripts use SLURM with the `shared` partition. The basecalling (Dorado) and functional annotation (Tiberius) jobs run on [Berzelius] (https://www.nsc.liu.se/systems/berzelius/) (NSC, Linköping University) under allocation berzelius-2026-84. Tiberius gene prediction scripts use SLURM with the berzelius partition, requesting 1 GPU per job.
+Most jobs run on [Dardel](https://www.pdc.kth.se/hpc-services/computing-systems/dardel) (PDC, KTH Stockholm) under NAISS allocation `naiss2026-3-199`. Scripts use SLURM with the `shared` partition. The basecalling (Dorado) and functional annotation (Tiberius) jobs run on [Berzelius](https://www.nsc.liu.se/systems/berzelius/) (NSC, Linköping University) under allocation berzelius-2026-84. Tiberius gene prediction scripts use SLURM with the berzelius partition, requesting 1 GPU per job.
 
 Raw data (POD5, FASTQ) and large analysis outputs are not tracked in this repository. See `project_log.md` for a detailed account of all steps, results, and decisions.
